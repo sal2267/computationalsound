@@ -1,11 +1,5 @@
 var audioCtx;
 var waveform = 'sine';
-var mode = 'additive';
-var AM_modulator_freq = 10;
-var FM_modulator_freq = 100;
-var FM_modulation_index = 250;
-var ATTACK = 0.05;
-var RELEASE = 0.08;
 var globalGain;
 const QUACK_KEY = '76'; // L
 var quackBuffer = null;
@@ -13,74 +7,33 @@ var keyPressCount = 0;
 const QUACK_INTERVAL = 10;
 
 document.addEventListener("DOMContentLoaded", function(event){
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-  fetch('quack.mp3')
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    fetch('quack.mp3')
     .then(response => response.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
-    .then(buffer => { quackBuffer = buffer; })
+    .then(buffer => {
+        quackBuffer = buffer;
+    })
     .catch(err => console.error('Error loading quack:', err));
 
-  globalGain = audioCtx.createGain();
-  globalGain.gain.setValueAtTime(0.8, audioCtx.currentTime);
-  globalGain.connect(audioCtx.destination);
-
-  // Waveform toggle
+    globalGain = audioCtx.createGain();
+    globalGain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+    globalGain.connect(audioCtx.destination);
+    
     const waveToggleButton = document.getElementById("waveToggle");
     waveToggleButton.addEventListener("click", function() {
-        if (waveform === 'sine') {
-            waveform = 'sawtooth';
-            waveToggleButton.textContent = "Waveform: Sawtooth";
-        } else {
-            waveform = 'sine';
-            waveToggleButton.textContent = "Waveform: Sine";
+    if (waveform === 'sine') {
+        waveform = 'sawtooth';
+        waveToggleButton.textContent = "Waveform: Sawtooth";
+    } else if (waveform === 'sawtooth') {
+        waveform = 'sine';
+        waveToggleButton.textContent = "Waveform: Sine";
     }
+
 });
-
-  // Mode radio buttons (THIS MUST BE OUTSIDE waveform click)
-  const modeRadios = document.querySelectorAll('input[name="mode"]');
-  modeRadios.forEach(radio => {
-    radio.addEventListener('change', (e) => {
-      mode = e.target.value;
-      console.log("Mode switched to:", mode);
-    });
-  });
-  // --- sliders: update globals + show values ---
-    const amFreq = document.getElementById("amFreq");
-    const amVal = document.getElementById("amVal");
-    amFreq.addEventListener("input", (e) => {
-        AM_modulator_freq = parseFloat(e.target.value);
-        amVal.textContent = AM_modulator_freq;
-    });
-
-    const fmFreq = document.getElementById("fmFreq");
-    const fmVal = document.getElementById("fmVal");
-    fmFreq.addEventListener("input", (e) => {
-        FM_modulator_freq = parseFloat(e.target.value);
-        fmVal.textContent = FM_modulator_freq;
-    });
-
-    const fmIndex = document.getElementById("fmIndex");
-    const fmIndexVal = document.getElementById("fmIndexVal");
-    fmIndex.addEventListener("input", (e) => {
-        FM_modulation_index = parseFloat(e.target.value);
-        fmIndexVal.textContent = FM_modulation_index;
-    });
-
-    const attackSlider = document.getElementById("attack");
-    const atkVal = document.getElementById("atkVal");
-    attackSlider.addEventListener("input", (e) => {
-        ATTACK = parseFloat(e.target.value);
-        atkVal.textContent = ATTACK.toFixed(3);
-    });
-
-    const releaseSlider = document.getElementById("release");
-    const relVal = document.getElementById("relVal");
-    releaseSlider.addEventListener("input", (e) => {
-        RELEASE = parseFloat(e.target.value);
-        relVal.textContent = RELEASE.toFixed(3);
-    });
-});
+})
 
 const keyboardFrequencyMap = {
     '90': 261.625565300598634,  //Z - C
@@ -139,153 +92,42 @@ function keyDown(event) {
 
 function keyUp(event) {
     const key = (event.detail || event.which).toString();
-
     if (keyboardFrequencyMap[key] && activeOscillators[key]) {
-        const { oscs, nodeGain } = activeOscillators[key];
+        const {osc, nodeGain} = activeOscillators[key];
         const now = audioCtx.currentTime;
-
         nodeGain.gain.cancelScheduledValues(now);
-        nodeGain.gain.setTargetAtTime(0.0, now, RELEASE);
 
-        const stopAt = now + (RELEASE * 6);
-        oscs.forEach(obj => {
-        try { 
-            obj.osc.stop(stopAt); 
-            if (obj.lfo) obj.lfo.stop(stopAt); 
-        } catch(e) {}
-});
-
-
+        nodeGain.gain.setTargetAtTime(0.0001, now, 0.08);
+        osc.stop(now + 0.51);
         delete activeOscillators[key];
-        updateGains();
     }
 }
 
 function playNote(key) {
-    console.log("playNote() using mode:", mode);
-    const now = audioCtx.currentTime;
-    const freq = keyboardFrequencyMap[key];
-
-    // Envelope gain (shared by whole voice)
+    
     const nodeGain = audioCtx.createGain();
-    nodeGain.gain.setValueAtTime(0.0001, now);
-    nodeGain.gain.setTargetAtTime(1.0, now, ATTACK);
-
-    // Per-voice gain (for polyphony scaling + anti-clipping)
-    const voiceGain = audioCtx.createGain();
-    voiceGain.gain.setValueAtTime(0.25, now);
-
-    const oscs = [];
-
-    if (mode === 'additive') {
-        const partials = [
-            { mult: 1, gain: 1.0 },
-            { mult: 2, gain: 0.5 },
-            { mult: 3, gain: 0.25 },
-            { mult: 4, gain: 0.125 },
-        ];
-
-        partials.forEach(p => {
-            const osc = audioCtx.createOscillator();
-            osc.type = waveform;
-            osc.frequency.setValueAtTime(freq * p.mult, now);
-
-            var lfo = audioCtx.createOscillator();
-            lfo.frequency.value = 0.5;
-            lfoGain = audioCtx.createGain();
-            lfoGain.gain.value = 8;
-            lfo.connect(lfoGain).connect(osc.frequency);
-            lfo.start();
-
-            const partialGain = audioCtx.createGain();
-            partialGain.gain.setValueAtTime(p.gain, now);
-
-            // IMPORTANT: partials -> nodeGain (envelope) -> voiceGain
-            osc.connect(partialGain);
-            partialGain.connect(nodeGain);
-
-            osc.start(now);
-            oscs.push({ osc, lfo });
-        });
-
-        nodeGain.connect(voiceGain);
-
-    } else if (mode === 'FM') {
-        const carrier = audioCtx.createOscillator();
-        carrier.type = waveform;
-        carrier.frequency.setValueAtTime(freq, now);
-
-        const modulator = audioCtx.createOscillator();
-        modulator.type = 'sine';
-        modulator.frequency.setValueAtTime(FM_modulator_freq, now);
-
-        const modulationGain = audioCtx.createGain();
-        modulationGain.gain.setValueAtTime(FM_modulation_index, now);
-
-        // FM wiring: mod -> gain -> carrier.frequency
-        modulator.connect(modulationGain);
-        modulationGain.connect(carrier.frequency);
-
-        carrier.connect(nodeGain);
-        nodeGain.connect(voiceGain);
-
-        modulator.start(now);
-        carrier.start(now);
-
-        oscs.push(carrier, modulator);
-
-    } else if (mode === 'AM') {
-        const carrier = audioCtx.createOscillator();
-        carrier.type = waveform;
-        carrier.frequency.setValueAtTime(freq, now);
-
-        // AM: carrier goes through a gain whose gain is modulated
-        const ampGain = audioCtx.createGain();
-
-        // Depth (0..1). Offset keeps gain positive (prevents negative gain flips)
-        const depth = 0.7;
-
-        const modulator = audioCtx.createOscillator();
-        modulator.type = 'sine';
-        modulator.frequency.setValueAtTime(AM_modulator_freq, now);
-
-        const modGain = audioCtx.createGain();
-        modGain.gain.setValueAtTime(depth, now);
-
-        const offset = audioCtx.createConstantSource();
-        offset.offset.setValueAtTime(1.0 - depth, now);
-
-        modulator.connect(modGain);
-        modGain.connect(ampGain.gain);
-        offset.connect(ampGain.gain);
-
-        carrier.connect(ampGain);
-        ampGain.connect(nodeGain);
-        nodeGain.connect(voiceGain);
-
-        modulator.start(now);
-        offset.start(now);
-        carrier.start(now);
-
-        oscs.push(carrier, modulator, offset);
-    }
-
-    // final output routing
-    voiceGain.connect(globalGain);
-
-    // store voice (NOTE: includes voiceGain now)
-    activeOscillators[key] = { oscs, nodeGain, voiceGain };
+    nodeGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+    nodeGain.gain.setTargetAtTime(0.8, audioCtx.currentTime, 0.1);
+    
+    const osc = audioCtx.createOscillator();
+    osc.frequency.setValueAtTime(keyboardFrequencyMap[key], audioCtx.currentTime)
+    osc.type = waveform;
+    activeOscillators[key] = {osc, nodeGain};
     updateGains();
-}
+
+    osc.connect(nodeGain);
+    nodeGain.connect(globalGain);    
+    osc.start();
+    
+  }
 
 function updateGains() {
     const keys = Object.keys(activeOscillators);
-    const n = keys.length;
-    const scale = n > 0 ? 0.25 / n : 0.25;
+    const scale = keys.length > 0 ? 0.8 / keys.length : 1;
 
-    keys.forEach(k => {
-        const { voiceGain } = activeOscillators[k];
-        if (voiceGain) voiceGain.gain.setValueAtTime(scale, audioCtx.currentTime);
+    keys.forEach(key => {
+        const { nodeGain } = activeOscillators[key];
+        nodeGain.gain.setValueAtTime(scale, audioCtx.currentTime);
     });
 }
 
