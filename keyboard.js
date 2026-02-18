@@ -122,13 +122,19 @@ function playNote(key) {
   }
 
 function updateGains() {
-    const keys = Object.keys(activeOscillators);
-    const scale = keys.length > 0 ? 0.8 / keys.length : 1;
+  const keys = Object.keys(activeOscillators);
+  const scale = keys.length > 0 ? 0.8 / keys.length : 1;
+  const now = audioCtx.currentTime;
 
-    keys.forEach(key => {
-        const { nodeGain } = activeOscillators[key];
-        nodeGain.gain.setValueAtTime(scale, audioCtx.currentTime);
-    });
+  keys.forEach(key => {
+    const { nodeGain } = activeOscillators[key];
+
+    // Prevent discontinuities when rebalancing polyphony
+    nodeGain.gain.cancelScheduledValues(now);
+    nodeGain.gain.setTargetAtTime(scale, now, 0.01); // 10ms smoothing
+    // alternatively:
+    // nodeGain.gain.linearRampToValueAtTime(scale, now + 0.01);
+  });
 }
 
 function playQuack() {
