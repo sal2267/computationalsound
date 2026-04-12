@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lab 3 – Farnell Synthesis</title>
+  <link rel="icon" href="data:,">
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 2em; line-height: 1.6; }
+    h1 { border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+    h2 { margin-top: 2em; }
+    pre { background: #f4f4f4; padding: 1em; overflow-x: auto; border-left: 3px solid #ccc; }
+    code { font-size: 0.9em; }
+    .demo-box { border: 1px solid #ccc; padding: 1em 1.5em; margin: 1.5em 0; background: #fafafa; }
+    .demo-box h3 { margin-top: 0; }
+    label { font-size: 1em; }
+    button { font-size: 1em; padding: 0.4em 1em; margin-right: 0.5em; cursor: pointer; }
+    .signal-flow { font-style: italic; color: #555; margin: 0.5em 0; }
+    .diagram { 
+      max-width: 100%;  /* Change this percentage (e.g., 80%, 60%, 50%) */
+      height: auto; 
+      margin: 1.5em 0; 
+      border: 1px solid #ddd; 
+      padding: 0.5em; 
+      background: white; 
+}
+  </style>
+</head>
+<body>
+
+<!-- ===================== BABBLING BROOK ===================== -->
+<h2>Part I: Babbling Brook</h2>
+
+<p>The babbling brook is a recreation of a classic SuperCollider patch in WebAudio:</p>
+
+<div class="demo-box">
+  <h3>Babbling Brook</h3>
+  <button id="playBtn">▶ Play</button>
+  <button onclick="stopBrook()">■ Stop</button>
+</div>
+
+<!-- ===================== CREAKING DOOR ===================== -->
+<h2>Part II: Creaking Door (Farnell Ch. 32)</h2>
+
+<p>Farnell models a creaking door as two components: a <strong>stick-slip friction model</strong> that generates a timed pattern of impulses, and a <strong>resonant body</strong> that colors those impulses with the natural frequencies of a wooden door panel.</p>
+<p> This model from the text book makes sense to me since it models the friction behavior present in the physical system. The two surfaces catch onto each other, build tension, and release. Each release is an impulse. There's a threshold below which no creaking happens, which models the static friction. The interval between the events is created with an inverted force value with proportional random jitter. So slow creaking has loose timing and fast creaking has tight timing. Amplitude and decay model force buildup: so a longer gap means a louder, slower-decaying slip.</p>
+
+<pre><code>const amp   = Math.sqrt(dt / 0.1) * 0.6;
+const decay = 0.004 + Math.sqrt(dt / 0.1) * 0.015;</code></pre>
+
+<p>Each impulse passes through a bank of six bandpass filters approximating the resonant modes of a rectangular wooden panel, with a parallel dry path. A comb delay resonator follows, with delay times derived from Farnell's rectangular membrane series. In practice the result sounded more like a creaking floorboard than a door (which Farnell notes uses the identical model, just different material parameters).</p>
+
+<p class="signal-flow">impulse → gain envelope → bandpass bank ×6 + dry → comb delays ×8 → HP 125Hz → LP 2400Hz → output</p>
+
+<img src="door_diagram.png" alt="Creaking door signal flow diagram" class="diagram">
+<p class="diagram-caption">Figure 1: Signal flow diagram for the creaking door model</p>
+
+
+<div class="demo-box">
+  <h3>Creaking Door</h3>
+  <button onclick="startDoor()">▶ Start</button>
+  <button onclick="stopDoor()">■ Stop</button>
+</div>
+
+<!-- ===================== BOUNCING BALL ===================== -->
+<h2>Part II (Again): Bouncing Ball (Farnell Ch. 30)</h2>
+
+<p>I wasn't very happy with the sound created with the creaking door, since I felt like a more defining characteristic of a door was a squeaky hinge, combined with slight creaks of wood. It does coincidentally sound like the floor of my room, which is peeling up because of the heater... However, while tuning the door creak I thought the sound shifted toward something more like a woodpecker or a ball bouncing on a floor. So I read Farnell's Chapter 30 on bouncing. Unsurprisingly, Farnell models it differently, so I tried to reimplement this bouncing ball in his way.</p>
+
+<p>Farnell's approach is a simplified model of the underlying physics. Rather than computing actual trajectories, he observes that the key perceptual features (bounces getting closer together and quieter) can be produced by a single linear energy envelope driving everything at once. All bounces are pre-scheduled on the AudioContext clock in one pass, giving sample-accurate timing for the fast final bounces where millisecond drift would be audible. I, however, as a physics major, decided to schedule the bounces according to Newton laws, so this models a ball that bounces on earth subject to gravity :)</p>
+
+<p>The impact sound uses <strong>FM synthesis</strong> rather than a formant bank. A carrier oscillator is modulated by a second oscillator whose depth scales with bounce energy. This models the physical nonlinearity Farnell describes: a high-energy bounce deforms the ball considerably, producing harmonically dense sound; a low-energy bounce barely deforms it, producing something close to a pure tone.</p>
+
+<pre><code>modDepth.gain.setValueAtTime(0.3 * energy, when);
+
+carrier.frequency.setValueAtTime(200 - 80 * (1 - energy), when);
+carrier.frequency.exponentialRampToValueAtTime(
+    Math.max(180, 260 - 40 * (1 - energy)), when + decay
+);</code></pre>
+
+<p>The carrier also sweeps downward in pitch on each impact, approximating the pitch drop as the ball shape restores. However, after implementing this model, I felt that it was too bass heavy or too resonant. Farnell's original spec puts the carrier at 120Hz (calibrated for a "very bouncy object") and he notes it breaks down for small drop heights. I believe that the carrier and adjusting the FM ratio would push it toward something lighter like a ping pong ball.</p>
+
+<p class="signal-flow">energy envelope → FM oscillator pair (carrier + modulator) → amplitude envelope → output</p>
+
+<img src="bouncing_diagram.png" alt="Bouncing ball signal flow diagram" class="diagram">
+<p class="diagram-caption">Figure 2: Signal flow diagram for the bouncing ball FM synthesis model</p>
+
+
+<div class="demo-box">
+  <h3>Bouncing Ball</h3>
+  <label>Drop height: <input type="range" min="0.1" max="5.0" step="0.1" value="1.0" oninput="dropHeight = +this.value"></label>
+  <br><br>
+  <button onclick="dropBall()">▶ Drop</button>
+</div>
+
+<!-- ===================== REFLECTION ===================== -->
+<h2>Reflection</h2>
+
+<p>Please excuse the fact that I am not necessarily satisfied with the sounds I coded, however in doing both sounds, I got to explore different ways to model a physical system. The two Farnell chapters use completely different synthesis methods (subtractive/modal filtering for the door, FM for the ball), but both start from an excitation source that gets altered by a resonant body. For the door, the door panel is the resonator and you need filters tuned to its modes. For the ball, the deformation is the interesting part, and FM captures that more naturally than any filter could.</p>
+
+<p> The babbling brook doesn't sound exactly like the audio on the homework assignment (sounds more windy and less 'bubbly'), but I'm hoping that's just because of the fact that in webaudio, all filters are biquad filters that we choose to make RLPF or LPFs.</p>
+
+<script src="audio.js"></script>
+</body>
+</html>
