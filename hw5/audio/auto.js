@@ -151,16 +151,27 @@ function getNextNote() {
   return nextNote;
 }
 
-function changeOrder(){
-  const order = parseInt(document.getElementById("markovOrder").value);
+function changeOrder() {
+  let order = parseInt(document.getElementById("markovOrder").value);
+
+  if (isNaN(order) || order < 1) {
+    alert("Please enter a valid order (>= 1)");
+    return;
+  }
+
+  if (order >= trainingMelody.length) {
+    alert("Order too large for current training melody.");
+    return;
+  }
+
   const success = initializeM(order, trainingMelody);
 
   if (!success) {
-    alert("Not enough notes to train the Markov chain with the selected order.");
+    alert("Not enough notes to train the Markov chain.");
   }
 
-  if (!playing){
-    out.textContent = 'Markov chain trained with order ' + order;
+  if (!playing) {
+    out.textContent = "Markov chain trained with order " + order;
   }
 }
 
