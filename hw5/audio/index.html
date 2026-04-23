@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive Markov + CA Music Generator</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+    
+        h1 { color: #333; margin-bottom: 10px; }
+        h2 { color: #555; font-size: 18px; margin-top: 25px; }
+    
+        #cellaCanvas {
+            border: 2px solid #333;
+            background: #fff;
+            display: block;
+            margin: 20px auto;
+            cursor: crosshair;
+        }
+    
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    
+        .control-group {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    
+        .control-group label {
+            min-width: 150px;
+            font-weight: bold;
+        }
+    
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+            background: #4a9eff;
+            color: white;
+            font-weight: bold;
+        }
+    
+        button:hover { background: #357abd; }
+        button:active { transform: scale(0.98); }
+
+        input[type="range"] { flex:1; max-width: 300px;}
+
+        textarea, input[type='text'], select {
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        textarea {
+            flex: 1;
+            max-width: 500px;
+            font-family: monospace;
+        }
+
+        #output {
+            margin: 15px 0;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            min-height: 30px;
+            font-family: monospace;
+        }
+
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .button-row {
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .range-value {
+            min-width: 70px;
+            text-align: right;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+  <h1>Interactive Automated Composition</h1>
+  <p style="color: #666;">
+    Learned Markov Chains for Pitch + Cellular Automata for Rhythm
+  </p>
+
+  <div class="info">
+    <strong>How to use:</strong>
+    <ul>
+      <li>Click on the grid to toggle cells</li>
+      <li>Choose CA rules to change rhythm</li>
+      <li>Adjust Markov order to control pitch memory</li>
+      <li>Edit training melody and relearn</li>
+    </ul>
+  </div>
+
+  <canvas id="cellaCanvas" width="480" height="480"></canvas>
+
+  <div class="button-row">
+    <button onclick="start()">Start</button>
+    <button onclick="stop()">Stop</button>
+    <button onclick="resetCella()">Reset CA</button>
+    <button onclick="stepCella()">Step</button>
+  </div>
+
+  <!-- MARKOV SECTION -->
+  <div class="controls">
+    <h2>Markov Settings</h2>
+
+    <div class="control-group">
+      <label>Training Notes:</label>
+      <textarea id="trainingNotes" rows="4">
+C C G G A A G F F E E D D C G G F F E E D
+      </textarea>
+    </div>
+
+    <div class="control-group">
+      <label>Markov Order:</label>
+      <select id="markovOrder" onchange="changeOrder()">
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
+    </div>
+
+    <div class="button-row">
+      <button onclick="retrainMarkov()">Relearn</button>
+    </div>
+  </div>
+
+  <!-- CA SECTION -->
+  <div class="controls">
+    <h2>Cellular Automata</h2>
+
+    <div class="control-group">
+      <label>Rule:</label>
+      <select id="caRule" onchange="changeRule()"></select>
+    </div>
+
+    <div class="control-group">
+      <label>Density:</label>
+      <input type="range" id="density" min="0.1" max="0.9" step="0.1" value="0.3">
+    </div>
+
+    <div class="control-group">
+      <label>Update Frequency:</label>
+      <input type="range" id="updateFreq" min="2" max="32" step="2" value="8">
+    </div>
+  </div>
+
+  <!-- SOUND -->
+  <div class="controls">
+    <h2>Sound</h2>
+
+    <div class="control-group">
+      <label>Waveform:</label>
+      <select id="waveform">
+        <option value="sine">Sine</option>
+        <option value="square">Square</option>
+        <option value="sawtooth">Saw</option>
+        <option value="triangle">Triangle</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label>Volume:</label>
+      <input type="range" id="volume" min="0.05" max="0.4" step="0.05" value="0.2">
+    </div>
+  </div>
+
+  <div id="output">Ready.</div>
+
+  <script src="auto.js"></script>
+
+</body>
+</html>
