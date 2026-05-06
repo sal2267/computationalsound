@@ -225,33 +225,37 @@ class FourierSynthesizer {
             alert('Please draw a waveform first!');
             return null;
         }
-        
-        // Sample the drawn path into uniform samples
+
         const samples = new Array(this.sampleSize);
         const canvasWidth = this.drawingCanvas.width;
         const canvasHeight = this.drawingCanvas.height;
-        
-        // For each sample position, find the closest drawn point
+
+        // Sort points by x position
+        const points = [...this.drawnPath].sort((a, b) => a.x - b.x);
+
         for (let i = 0; i < this.sampleSize; i++) {
-            const targetX = (i / this.sampleSize) * canvasWidth;
-            
-            // Find closest point in drawn path
-            let closestPoint = this.drawnPath[0];
-            let minDist = Math.abs(this.drawnPath[0].x - targetX);
-            
-            for (let point of this.drawnPath) {
-                const dist = Math.abs(point.x - targetX);
-                if (dist < minDist) {
-                    minDist = dist;
-                    closestPoint = point;
-                }
+            const targetX = (i / (this.sampleSize - 1)) * canvasWidth;
+
+            let j = 0;
+            while (j < points.length - 2 && points[j + 1].x < targetX) {
+                j++;
             }
-            
-            // Normalize Y to range [-1, 1] (center is 0)
-            const normalizedY = (canvasHeight / 2 - closestPoint.y) / (canvasHeight / 2);
-            samples[i] = normalizedY;
+
+            const p1 = points[j];
+            const p2 = points[j + 1];
+
+            let y;
+
+            if (!p2 || p1.x === p2.x) {
+                y = p1.y;
+            } else {
+                const t = (targetX - p1.x) / (p2.x - p1.x);
+                y = p1.y + t * (p2.y - p1.y);
+            }
+
+            samples[i] = (canvasHeight / 2 - y) / (canvasHeight / 2);
         }
-        
+
         return samples;
     }
     
