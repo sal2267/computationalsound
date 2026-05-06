@@ -152,31 +152,39 @@ class FourierSynthesizer {
     
     startDrawing(e) {
         this.isDrawing = true;
+
         const rect = this.drawingCanvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
+
+        const scaleX = this.drawingCanvas.width / rect.width;
+        const scaleY = this.drawingCanvas.height / rect.height;
+
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+
         this.drawnPath = [{x, y}];
-        
-        // Reset drawing style
-        this.drawingCtx.strokeStyle = '#667eea';
+
+        this.drawingCtx.strokeStyle = '#38bdf8';
         this.drawingCtx.lineWidth = 3;
         this.drawingCtx.lineCap = 'round';
         this.drawingCtx.lineJoin = 'round';
-        
+
         this.drawingCtx.beginPath();
         this.drawingCtx.moveTo(x, y);
     }
     
     draw(e) {
         if (!this.isDrawing) return;
-        
+
         const rect = this.drawingCanvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
+
+        const scaleX = this.drawingCanvas.width / rect.width;
+        const scaleY = this.drawingCanvas.height / rect.height;
+
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+
         this.drawnPath.push({x, y});
-        
+
         this.drawingCtx.lineTo(x, y);
         this.drawingCtx.stroke();
     }
