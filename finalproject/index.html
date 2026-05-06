@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fourier Synthesizer & Analyzer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Interactive Fourier Synthesizer</h1>
+            <p>Draw a waveform and watch it decompose into harmonics</p>
+        </header>
+
+        <main>
+            <!-- Drawing Canvas -->
+            <section class="canvas-section">
+                <h2>Draw Your Waveform</h2>
+                <div class="canvas-container">
+                    <canvas id="drawingCanvas" width="800" height="300"></canvas>
+                </div>
+                <div class="canvas-controls">
+                    <button id="clearBtn">Clear</button>
+                    <button id="analyzeBtn">Analyze FFT</button>
+                    <label>
+                        Samples: 
+                        <select id="sampleSize">
+                            <option value="256">256</option>
+                            <option value="512" selected>512</option>
+                            <option value="1024">1024</option>
+                            <option value="2048">2048</option>
+                        </select>
+                    </label>
+                </div>
+            </section>
+
+            <!-- Frequency Domain Visualization -->
+            <section class="spectrum-section">
+                <h2>Frequency Spectrum (Harmonics)</h2>
+                <div class="canvas-container">
+                    <canvas id="spectrumCanvas" width="800" height="200"></canvas>
+                </div>
+                <div id="harmonicInfo"></div>
+            </section>
+
+            <!-- Waveform Comparison -->
+            <section class="waveform-section">
+                <h2>Original vs Reconstructed</h2>
+                <div class="canvas-container">
+                    <canvas id="waveformCanvas" width="800" height="200"></canvas>
+                </div>
+            </section>
+
+            <!-- Audio Synthesis Controls -->
+            <section class="synthesis-section">
+                <h2>Audio Synthesis</h2>
+                <div class="synth-controls">
+                    <div class="control-group">
+                        <label>
+                            Fundamental Frequency (Hz):
+                            <input type="range" id="fundamentalFreq" min="50" max="1000" value="220" step="1">
+                            <span id="freqDisplay">220 Hz</span>
+                        </label>
+                    </div>
+                    <div class="control-group">
+                        <label>
+                            Number of Harmonics:
+                            <input type="range" id="numHarmonics" min="1" max="256" value="16" step="1">
+                            <span id="harmonicsDisplay">16</span>
+                        </label>
+                    </div>
+                    <div class="control-group">
+                        <label>
+                            Master Volume:
+                            <input type="range" id="masterVolume" min="0" max="100" value="30" step="1">
+                            <span id="volumeDisplay">30%</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="playback-controls">
+                    <button id="playBtn" class="play-button">▶ Play Sound</button>
+                    <button id="stopBtn" class="stop-button">⏹ Stop</button>
+                    <p class="keyboard-hint">Or use keyboard: Press keys A-K to play different notes</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
