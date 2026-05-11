@@ -1,7 +1,5 @@
-// ============================================
-// FOURIER SYNTHESIZER - MAIN APPLICATION
-// ============================================
 
+// FOURIER SYNTHESIZER
 class FourierSynthesizer {
     constructor() {
         // Canvas references
@@ -40,10 +38,8 @@ class FourierSynthesizer {
         this.setupEventListeners();
         this.drawGrid(this.drawingCtx, this.drawingCanvas);
     }
-    
-    // ========================================
-    // CANVAS DRAWING SETUP
-    // ========================================
+
+    // CANVAS SETUP
     
     setupDrawingCanvas() {
         const ctx = this.drawingCtx;
@@ -146,9 +142,8 @@ class FourierSynthesizer {
         document.addEventListener('keyup', this.handleKeyRelease.bind(this));
     }
     
-    // ========================================
+
     // DRAWING FUNCTIONS
-    // ========================================
     
     startDrawing(e) {
         this.isDrawing = true;
@@ -216,9 +211,8 @@ class FourierSynthesizer {
         document.getElementById('harmonicInfo').textContent = '';
     }
     
-    // ========================================
-    // WAVEFORM SAMPLING
-    // ========================================
+
+    // SAMPLING THE WAVEFORM
     
     sampleDrawnPath() {
         if (this.drawnPath.length < 2) {
@@ -259,9 +253,7 @@ class FourierSynthesizer {
         return samples;
     }
     
-    // ========================================
     // FFT ANALYSIS
-    // ========================================
     
     analyzeFFT() {
         // Sample the drawn waveform
@@ -271,8 +263,7 @@ class FourierSynthesizer {
         console.log('Sampled waveform:', this.sampledWaveform.slice(0, 10));
         
         try {
-            // Perform DFT (Discrete Fourier Transform)
-            // This is simpler than FFT but works fine for our purposes
+            // Perform DFT
             this.performDFT();
             
             console.log('DFT complete! First 10 harmonics:', this.harmonics.slice(0, 10));
@@ -291,7 +282,7 @@ class FourierSynthesizer {
     
     performDFT() {
         // Discrete Fourier Transform
-        // Extract frequency components from the sampled waveform
+        // get frequency components from the sampled waveform
         this.harmonics = [];
         
         const N = this.sampledWaveform.length;
@@ -327,10 +318,7 @@ class FourierSynthesizer {
         }
     }
     
-    
-    // ========================================
     // VISUALIZATION
-    // ========================================
     
     drawSpectrum() {
         const ctx = this.spectrumCtx;
@@ -338,7 +326,7 @@ class FourierSynthesizer {
         
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Draw bars for first 64 harmonics (or fewer)
+        // Draw bars for first 256 harmonics (or fewer)
         const numBars = Math.min(256, this.harmonics.length);
         const barWidth = canvas.width / numBars;
         
@@ -400,7 +388,7 @@ class FourierSynthesizer {
         }
         ctx.stroke();
         
-        // Reconstruct waveform from harmonics (inverse FFT concept)
+        // Reconstruct waveform from harmonics 
         const reconstructed = this.reconstructWaveform();
         
         // Draw reconstructed waveform
@@ -470,10 +458,10 @@ class FourierSynthesizer {
     displayHarmonicInfo() {
         const info = document.getElementById('harmonicInfo');
         
-        // Show info about top harmonics
+        // Show info about first few harmonics
         const topN = 8;
         const top = this.harmonics
-            .slice(1, topN + 1) // Skip DC component
+            .slice(1, topN + 1) 
             .sort((a, b) => b.magnitude - a.magnitude)
             .slice(0, 5);
         
@@ -488,9 +476,7 @@ class FourierSynthesizer {
         info.textContent = text;
     }
     
-    // ========================================
     // AUDIO SYNTHESIS
-    // ========================================
     
     initAudioContext() {
         if (!this.audioContext) {
@@ -553,7 +539,7 @@ class FourierSynthesizer {
     }
     
     createOscillatorBank() {
-        this.destroyOscillatorBank(); // Clean up any existing oscillators
+        this.destroyOscillatorBank(); // Clean up any oscillators
         
         const numHarmonics = Math.min(this.numHarmonicsToPlay, this.harmonics.length);
         
@@ -565,20 +551,19 @@ class FourierSynthesizer {
             
             // Create oscillator
             const osc = this.audioContext.createOscillator();
-            osc.type = 'sine'; // Pure sine wave
+            osc.type = 'sine';
             osc.frequency.setValueAtTime(
                 this.fundamentalFreq * harmonic.frequency,
                 this.audioContext.currentTime
             );
             
-            // Create gain node for this harmonic
+            // Create gain node 
             const gain = this.audioContext.createGain();
             
             // Normalize magnitude and apply it
             const normalizedMagnitude = harmonic.magnitude * 2; // Scale up for audibility
             gain.gain.setValueAtTime(normalizedMagnitude, this.audioContext.currentTime);
             
-            // Connect: oscillator -> gain -> master gain -> output
             osc.connect(gain);
             gain.connect(this.masterGain);
             
@@ -600,7 +585,7 @@ class FourierSynthesizer {
                 osc.stop();
                 osc.disconnect();
             } catch (e) {
-                // Oscillator might already be stopped
+                // might already be stopped
             }
         });
         
@@ -612,9 +597,9 @@ class FourierSynthesizer {
         this.oscillators = [];
         this.gainNodes = [];
     }
-    
+    // Update frequencies of playing oscillators
     updateOscillatorFrequencies() {
-        // Update frequencies of playing oscillators
+        
         this.oscillators.forEach((osc, i) => {
             if (this.harmonics[i]) {
                 const newFreq = this.fundamentalFreq * this.harmonics[i].frequency;
@@ -624,7 +609,6 @@ class FourierSynthesizer {
     }
     
     handleKeyPress(e) {
-        // Map keys to note frequencies (chromatic scale)
         const keyMap = {
             'a': 220.00,  // A3
             's': 233.08,  // A#3
@@ -655,9 +639,7 @@ class FourierSynthesizer {
     }
 }
 
-// ============================================
-// INITIALIZE APPLICATION
-// ============================================
+// INITIALIZE WEBPAGE
 
 let app;
 
